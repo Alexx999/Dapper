@@ -139,7 +139,7 @@ namespace Dapper
             private Func<IDataReader, object> GetReader(IDataReader reader, int startBound, int length, bool returnNullIfFirstMissing)
             {
                 if (length < 0) length = reader.FieldCount - startBound;
-                int hash = GetColumnHash(reader, startBound, length);
+                int hash = GetColumnHash(reader, true, startBound, length);
                 if (returnNullIfFirstMissing) hash *= -27;
                 // get a cheap key first: false means don't copy the values down
                 var key = new DeserializerKey(hash, startBound, length, returnNullIfFirstMissing, reader, false);

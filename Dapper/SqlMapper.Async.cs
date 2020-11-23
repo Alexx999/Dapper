@@ -418,7 +418,7 @@ namespace Dapper
                 reader = await ExecuteReaderWithFlagsFallbackAsync(cmd, wasClosed, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult, cancel).ConfigureAwait(false);
 
                 var tuple = info.Deserializer;
-                int hash = GetColumnHash(reader);
+                int hash = GetColumnHash(reader, !command.UnstableGetType);
                 if (tuple.Func == null || tuple.Hash != hash)
                 {
                     if (reader.FieldCount == 0)

@@ -69,6 +69,11 @@ namespace Dapper
         internal bool ReuseCommand => (Flags & CommandFlags.ReuseCommand) != 0;
 
         /// <summary>
+        /// Should the IDataReader.GetFieldType be treated as unstable?
+        /// </summary>
+        internal bool UnstableGetType => (Flags & CommandFlags.UnstableGetType) != 0;
+
+        /// <summary>
         /// Additional state flags against this command
         /// </summary>
         public CommandFlags Flags { get; }

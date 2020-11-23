@@ -31,7 +31,7 @@ namespace Dapper
         {
             public int Compare(PropertyInfo x, PropertyInfo y) => string.CompareOrdinal(x.Name, y.Name);
         }
-        private static int GetColumnHash(IDataReader reader, int startBound = 0, int length = -1)
+        private static int GetColumnHash(IDataReader reader, bool useObjectType = true, int startBound = 0, int length = -1)
         {
             unchecked
             {
@@ -40,7 +40,7 @@ namespace Dapper
                 for (int i = startBound; i < max; i++)
                 {
                     object tmp = reader.GetName(i);
-                    hash = (-79 * ((hash * 31) + (tmp?.GetHashCode() ?? 0))) + (reader.GetFieldType(i)?.GetHashCode() ?? 0);
+                    hash = (-79 * ((hash * 31) + (tmp?.GetHashCode() ?? 0))) + (useObjectType ? (reader.GetFieldType(i)?.GetHashCode() ?? 0) : 0);
                 }
                 return hash;
             }
@@ -1086,7 +1086,7 @@ namespace Dapper
                 // still need something in the "finally" to ensure that broken SQL still results
                 // in the connection closing itself
                 var tuple = info.Deserializer;
-                int hash = GetColumnHash(reader);
+                int hash = GetColumnHash(reader, !command.UnstableGetType);
                 if (tuple.Func == null || tuple.Hash != hash)
                 {
                     if (reader.FieldCount == 0) //https://code.google.com/p/dapper-dot-net/issues/detail?id=57
@@ -1122,7 +1122,7 @@ namespace Dapper
                     reader.Dispose();
                 }
                 if (wasClosed) cnn.Close();
-                cmd?.Dispose();
+                if (!command.ReuseCommand) cmd?.Dispose();
             }
         }
 
@@ -1223,7 +1223,7 @@ namespace Dapper
         private static T ReadRow<T>(CacheInfo info, Identity identity, ref CommandDefinition command, Type effectiveType, IDataReader reader)
         {
             var tuple = info.Deserializer;
-            int hash = GetColumnHash(reader);
+            int hash = GetColumnHash(reader, !command.UnstableGetType);
             if (tuple.Func == null || tuple.Hash != hash)
             {
                 tuple = info.Deserializer = new DeserializerState(hash, GetDeserializer(effectiveType, reader, 0, -1, false));
@@ -1451,7 +1451,7 @@ namespace Dapper
                 var deserializer = default(DeserializerState);
                 Func<IDataReader, object>[] otherDeserializers;
 
-                int hash = GetColumnHash(reader);
+                int hash = GetColumnHash(reader, !command.UnstableGetType);
                 if ((deserializer = cinfo.Deserializer).Func == null || (otherDeserializers = cinfo.OtherDeserializers) == null || hash != deserializer.Hash)
                 {
                     var deserializers = GenerateDeserializers(identity, splitOn, reader);
@@ -1521,7 +1521,7 @@ namespace Dapper
                 DeserializerState deserializer;
                 Func<IDataReader, object>[] otherDeserializers;
 
-                int hash = GetColumnHash(reader);
+                int hash = GetColumnHash(reader, !command.UnstableGetType);
                 if ((deserializer = cinfo.Deserializer).Func == null || (otherDeserializers = cinfo.OtherDeserializers) == null || hash != deserializer.Hash)
                 {
                     var deserializers = GenerateDeserializers(identity, splitOn, reader);

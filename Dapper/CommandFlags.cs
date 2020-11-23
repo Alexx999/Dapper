@@ -28,5 +28,9 @@ namespace Dapper
         /// Should the command object be reused?
         /// </summary>
         ReuseCommand = 8,
+        /// <summary>
+        /// Should the IDataReader.GetFieldType be treated as unstable?
+        /// </summary>
+        UnstableGetType = 16,
     }
 }
