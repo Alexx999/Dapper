@@ -24,5 +24,9 @@ namespace Dapper
         /// Should the plan cache be bypassed?
         /// </summary>
         NoCache = 4,
+        /// <summary>
+        /// Should the command object be reused?
+        /// </summary>
+        ReuseCommand = 8,
     }
 }

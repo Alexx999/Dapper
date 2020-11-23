@@ -64,6 +64,11 @@ namespace Dapper
         internal bool AddToCache => (Flags & CommandFlags.NoCache) == 0;
 
         /// <summary>
+        /// Should the command object be reused?
+        /// </summary>
+        internal bool ReuseCommand => (Flags & CommandFlags.ReuseCommand) != 0;
+
+        /// <summary>
         /// Additional state flags against this command
         /// </summary>
         public CommandFlags Flags { get; }
@@ -95,6 +100,7 @@ namespace Dapper
             CommandType = commandType;
             Flags = flags;
             CancellationToken = cancellationToken;
+            _cachedCommand = null;
         }
 
         private CommandDefinition(object parameters) : this()
@@ -107,7 +113,9 @@ namespace Dapper
         /// </summary>
         public CancellationToken CancellationToken { get; }
 
-        internal IDbCommand SetupCommand(IDbConnection cnn, Action<IDbCommand, object> paramReader)
+        private IDbCommand _cachedCommand;
+
+        private IDbCommand CreateCommand(IDbConnection cnn)
         {
             var cmd = cnn.CreateCommand();
             var init = GetInit(cmd.GetType());
@@ -119,12 +127,39 @@ namespace Dapper
             {
                 cmd.CommandTimeout = CommandTimeout.Value;
             }
-            else if (SqlMapper.Settings.CommandTimeout.HasValue)
+
+            if (CommandType.HasValue)
+                cmd.CommandType = CommandType.Value;
+
+            return cmd;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cnn"></param>
+        public void CacheCommand(IDbConnection cnn)
+        {
+            _cachedCommand ??= CreateCommand(cnn);
+            _cachedCommand.Prepare();
+        }
+
+        internal IDbCommand SetupCommand(IDbConnection cnn, Action<IDbCommand, object> paramReader)
+        {
+            IDbCommand cmd;
+            if(ReuseCommand)
+            {
+                cmd = _cachedCommand;
+                cmd.Parameters?.Clear();
+            }
+            else
+            {
+                cmd = CreateCommand(cnn);
+            }
+            if (!CommandTimeout.HasValue && SqlMapper.Settings.CommandTimeout.HasValue)
             {
                 cmd.CommandTimeout = SqlMapper.Settings.CommandTimeout.Value;
             }
-            if (CommandType.HasValue)
-                cmd.CommandType = CommandType.Value;
             paramReader?.Invoke(cmd, Parameters);
             return cmd;
         }
